@@ -8,16 +8,16 @@
 int main(int argc, char *argv[])
 {
 
-    Dims shape = {10, 10};
-    Dims start = {0, 0};
-    Dims count = {10, 10};
+    adios2::Dims shape = {10, 10};
+    adios2::Dims start = {0, 0};
+    adios2::Dims count = {10, 10};
     size_t vars = 1;
-    string engine = "DataMan";
-    Params engineParams = {{"WorkflowMode","P2P"}};
+    std::string engine = "Wdm";
+    adios2::Params engineParams = {{"Verbose","11"}};
 
-    auto begin = chrono::system_clock::now();
+    auto begin = std::chrono::system_clock::now();
     writer(shape, start, count, vars, engine, engineParams);
-    auto end = chrono::system_clock::now();
+    auto end = std::chrono::system_clock::now();
 
     return 0;
 }

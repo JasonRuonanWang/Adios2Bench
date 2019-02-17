@@ -4,18 +4,16 @@
 #include <mpi.h>
 #endif
 
-using namespace adios2;
-using namespace std;
 
 int mpiRank = 0;
 int mpiSize = 1;
 
-Dims shape;
-Dims start;
-Dims count;
+adios2::Dims shape;
+adios2::Dims start;
+adios2::Dims count;
 
-vector<vector<float>> floatsVecVec;
-vector<Variable<float>> floatsVarVec;
+std::vector<std::vector<float>> floatsVecVec;
+std::vector<adios2::Variable<float>> floatsVarVec;
 size_t vars;
 
 void GenData(bool zero){
@@ -90,12 +88,12 @@ void DumpInfo(std::vector<size_t> &shape, std::vector<size_t> &start, std::vecto
 }
 
 void reader(
-        const Dims &pShape,
-        const Dims &pStart,
-        const Dims &pCount,
+        const adios2::Dims &pShape,
+        const adios2::Dims &pStart,
+        const adios2::Dims &pCount,
         size_t pVars,
-        const string &pEngine,
-        const Params &pEngineParams
+        const std::string &pEngine,
+        const adios2::Params &pEngineParams
         ){
 
     MPI_Init(0, 0);
@@ -104,14 +102,15 @@ void reader(
 
     GenData(true);
 
-    ADIOS adios(MPI_COMM_WORLD, DebugON);
+    adios2::ADIOS adios(MPI_COMM_WORLD, adios2::DebugON);
     auto adiosIO = adios.DeclareIO("myIO");
     adiosIO.SetEngine(pEngine);
-    auto adiosEngine = adiosIO.Open("AdiosBench", Mode::Read);
+    adiosIO.SetParameters(pEngineParams);
+    auto adiosEngine = adiosIO.Open("AdiosBench", adios2::Mode::Read);
 
     adiosEngine.BeginStep();
     for(size_t i=0; i<vars; ++i){
-        string varName = "floatsVar" + to_string(i);
+        std::string varName = "floatsVar" + std::to_string(i);
         auto bpFloats = adiosIO.InquireVariable<float>(varName);
         bpFloats.SetSelection({start, count});
         adiosEngine.Get(floatsVarVec[i], floatsVecVec[i].data());
@@ -122,12 +121,12 @@ void reader(
 }
 
 void writer(
-        const Dims &pShape,
-        const Dims &pStart,
-        const Dims &pCount,
+        const adios2::Dims &pShape,
+        const adios2::Dims &pStart,
+        const adios2::Dims &pCount,
         size_t pVars,
-        const string &pEngine,
-        const Params &pEngineParams
+        const std::string &pEngine,
+        const adios2::Params &pEngineParams
         ){
 
     shape = pShape;
@@ -141,14 +140,14 @@ void writer(
 
     GenData(false);
 
-    ADIOS adios(MPI_COMM_WORLD, adios2::DebugON);
+    adios2::ADIOS adios(MPI_COMM_WORLD, adios2::DebugON);
     auto adiosIO = adios.DeclareIO("myIO");
     adiosIO.SetEngine(pEngine);
     adiosIO.SetParameters(pEngineParams);
     auto adiosEngine = adiosIO.Open("AdiosBench", adios2::Mode::Write);
 
     for(size_t i=0; i<vars; ++i){
-        string varName = "floatsVar" + to_string(i);
+        std::string varName = "floatsVar" + std::to_string(i);
         floatsVarVec.emplace_back(adiosIO.DefineVariable<float>(varName, shape, start, count));
     }
 
