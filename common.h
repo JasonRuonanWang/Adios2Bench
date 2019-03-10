@@ -8,21 +8,17 @@
 int mpiRank = 0;
 int mpiSize = 1;
 
-adios2::Dims shape;
-adios2::Dims start;
-adios2::Dims count;
 
 std::vector<std::vector<float>> floatsVecVec;
 std::vector<adios2::Variable<float>> floatsVarVec;
-size_t vars;
 
-void GenData(bool zero){
+void GenData(const bool zero, const size_t pVars, const adios2::Dims &count){
 
     size_t r = static_cast<size_t>(mpiRank);
     size_t s = static_cast<size_t>(mpiSize);
     size_t datasize = std::accumulate(count.begin(), count.end(), 1, std::multiplies<size_t>());
 
-    for(size_t i=0; i<vars; ++i){
+    for(size_t i=0; i<pVars; ++i){
         floatsVecVec.emplace_back();
         floatsVecVec.back().resize(datasize);
         if(!zero){
@@ -93,14 +89,15 @@ void reader(
         const adios2::Dims &pCount,
         size_t pVars,
         const std::string &pEngine,
-        const adios2::Params &pEngineParams
+        const adios2::Params &pEngineParams,
+        const size_t steps
         ){
 
     MPI_Init(0, 0);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
 
-    GenData(true);
+    GenData(true, pVars, pCount);
 
     adios2::ADIOS adios(MPI_COMM_WORLD, adios2::DebugON);
     auto adiosIO = adios.DeclareIO("myIO");
@@ -108,14 +105,28 @@ void reader(
     adiosIO.SetParameters(pEngineParams);
     auto adiosEngine = adiosIO.Open("AdiosBench", adios2::Mode::Read);
 
-    adiosEngine.BeginStep();
-    for(size_t i=0; i<vars; ++i){
-        std::string varName = "floatsVar" + std::to_string(i);
-        auto bpFloats = adiosIO.InquireVariable<float>(varName);
-        bpFloats.SetSelection({start, count});
-        adiosEngine.Get(floatsVarVec[i], floatsVecVec[i].data());
+    for(size_t t=0; t<steps; ++t)
+    {
+        adiosEngine.BeginStep();
+        for(size_t i=0; i<pVars; ++i){
+            std::string varName = "floatsVar" + std::to_string(i);
+            std::cout << " before var !!!!!!\n";
+            floatsVarVec[i] = adiosIO.InquireVariable<float>(varName);
+            std::cout << " after var !!!!!!\n";
+            if(!floatsVarVec[i])
+            {
+                std::cout << "bpFloats variable is nullptr\n";
+            }
+//            std::pair<float, float> minmax = bpFloats.MinMax();
+//            std::cout << "min = " << minmax.first << " max = " << minmax.second << std::endl;
+//            bpFloats.SetSelection({pStart, pCount});
+            std::cout << "before\n";
+            adiosEngine.Get(floatsVarVec[i], floatsVecVec[i].data());
+            std::cout << "after\n";
+        }
+        adiosEngine.EndStep();
     }
-    adiosEngine.EndStep();
+
     adiosEngine.Close();
     MPI_Finalize();
 }
@@ -126,19 +137,16 @@ void writer(
         const adios2::Dims &pCount,
         size_t pVars,
         const std::string &pEngine,
-        const adios2::Params &pEngineParams
+        const adios2::Params &pEngineParams,
+        const size_t steps
         ){
 
-    shape = pShape;
-    start = pStart;
-    count = pCount;
-    vars = pVars;
 
     MPI_Init(0, 0);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
 
-    GenData(false);
+    GenData(false, pVars, pCount);
 
     adios2::ADIOS adios(MPI_COMM_WORLD, adios2::DebugON);
     auto adiosIO = adios.DeclareIO("myIO");
@@ -146,16 +154,21 @@ void writer(
     adiosIO.SetParameters(pEngineParams);
     auto adiosEngine = adiosIO.Open("AdiosBench", adios2::Mode::Write);
 
-    for(size_t i=0; i<vars; ++i){
+    for(size_t i=0; i<pVars; ++i){
         std::string varName = "floatsVar" + std::to_string(i);
-        floatsVarVec.emplace_back(adiosIO.DefineVariable<float>(varName, shape, start, count));
+        floatsVarVec.emplace_back(adiosIO.DefineVariable<float>(varName, pShape, pStart, pCount));
     }
 
-    adiosEngine.BeginStep();
-    for(size_t i=0; i<vars; ++i){
-        adiosEngine.Put(floatsVarVec[i], floatsVecVec[i].data());
+    for(size_t t=0; t<steps; ++t)
+    {
+        adiosEngine.BeginStep();
+        for(size_t i=0; i<pVars; ++i){
+            adiosEngine.Put(floatsVarVec[i], floatsVecVec[i].data());
+        }
+        adiosEngine.EndStep();
     }
-    adiosEngine.EndStep();
+
+
     adiosEngine.Close();
 
     MPI_Finalize();

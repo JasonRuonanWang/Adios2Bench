@@ -5,6 +5,7 @@
 
 #include "common.h"
 
+
 int main(int argc, char *argv[])
 {
 
@@ -16,8 +17,11 @@ int main(int argc, char *argv[])
     adios2::Params engineParams = {{"Verbose","11"}};
 
     auto begin = std::chrono::system_clock::now();
-    writer(shape, start, count, vars, engine, engineParams);
+    reader(shape, start, count, vars, engine, engineParams, 100);
     auto end = std::chrono::system_clock::now();
+
+    std::chrono::duration<double> duration = end - begin;
+    std::cout << duration.count() << std::endl;
 
     return 0;
 }
