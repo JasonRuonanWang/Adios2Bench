@@ -5,12 +5,20 @@
 #endif
 
 
+adios2::Dims shape = {10, 10};
+adios2::Dims start = {0, 0};
+adios2::Dims count = {10, 10};
+
+size_t steps = 10000;
+size_t vars = 1;
+
+std::string engine = "Wdm";
+adios2::Params engineParams = {{"Verbose","11"}};
+
 int mpiRank = 0;
 int mpiSize = 1;
 
-
 std::vector<std::vector<float>> floatsVecVec;
-std::vector<adios2::Variable<float>> floatsVarVec;
 
 void GenData(const bool zero, const size_t pVars, const adios2::Dims &count){
 
@@ -83,93 +91,3 @@ void DumpInfo(std::vector<size_t> &shape, std::vector<size_t> &start, std::vecto
     }
 }
 
-void reader(
-        const adios2::Dims &pShape,
-        const adios2::Dims &pStart,
-        const adios2::Dims &pCount,
-        size_t pVars,
-        const std::string &pEngine,
-        const adios2::Params &pEngineParams,
-        const size_t steps
-        ){
-
-    MPI_Init(0, 0);
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
-    MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
-
-    GenData(true, pVars, pCount);
-
-    adios2::ADIOS adios(MPI_COMM_WORLD, adios2::DebugON);
-    auto adiosIO = adios.DeclareIO("myIO");
-    adiosIO.SetEngine(pEngine);
-    adiosIO.SetParameters(pEngineParams);
-    auto adiosEngine = adiosIO.Open("AdiosBench", adios2::Mode::Read);
-
-    for(size_t t=0; t<steps; ++t)
-    {
-        adiosEngine.BeginStep();
-        for(size_t i=0; i<pVars; ++i){
-            std::string varName = "floatsVar" + std::to_string(i);
-            std::cout << " before var !!!!!!\n";
-            floatsVarVec[i] = adiosIO.InquireVariable<float>(varName);
-            std::cout << " after var !!!!!!\n";
-            if(!floatsVarVec[i])
-            {
-                std::cout << "bpFloats variable is nullptr\n";
-            }
-//            std::pair<float, float> minmax = bpFloats.MinMax();
-//            std::cout << "min = " << minmax.first << " max = " << minmax.second << std::endl;
-//            bpFloats.SetSelection({pStart, pCount});
-            std::cout << "before\n";
-            adiosEngine.Get(floatsVarVec[i], floatsVecVec[i].data());
-            std::cout << "after\n";
-        }
-        adiosEngine.EndStep();
-    }
-
-    adiosEngine.Close();
-    MPI_Finalize();
-}
-
-void writer(
-        const adios2::Dims &pShape,
-        const adios2::Dims &pStart,
-        const adios2::Dims &pCount,
-        size_t pVars,
-        const std::string &pEngine,
-        const adios2::Params &pEngineParams,
-        const size_t steps
-        ){
-
-
-    MPI_Init(0, 0);
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
-    MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
-
-    GenData(false, pVars, pCount);
-
-    adios2::ADIOS adios(MPI_COMM_WORLD, adios2::DebugON);
-    auto adiosIO = adios.DeclareIO("myIO");
-    adiosIO.SetEngine(pEngine);
-    adiosIO.SetParameters(pEngineParams);
-    auto adiosEngine = adiosIO.Open("AdiosBench", adios2::Mode::Write);
-
-    for(size_t i=0; i<pVars; ++i){
-        std::string varName = "floatsVar" + std::to_string(i);
-        floatsVarVec.emplace_back(adiosIO.DefineVariable<float>(varName, pShape, pStart, pCount));
-    }
-
-    for(size_t t=0; t<steps; ++t)
-    {
-        adiosEngine.BeginStep();
-        for(size_t i=0; i<pVars; ++i){
-            adiosEngine.Put(floatsVarVec[i], floatsVecVec[i].data());
-        }
-        adiosEngine.EndStep();
-    }
-
-
-    adiosEngine.Close();
-
-    MPI_Finalize();
-}
