@@ -9,10 +9,10 @@ adios2::Dims shape = {10, 10};
 adios2::Dims start = {0, 0};
 adios2::Dims count = {10, 10};
 
-size_t steps = 10000;
+size_t steps = 10000000;
 size_t vars = 1;
 
-std::string engine = "Wdm";
+std::string engine = "dataman";
 adios2::Params engineParams = {{"Verbose","11"}};
 
 int mpiRank = 0;
@@ -20,10 +20,10 @@ int mpiSize = 1;
 
 std::vector<std::vector<float>> floatsVecVec;
 
-void GenData(const bool zero, const size_t pVars, const adios2::Dims &count){
+void GenData(const bool zero, const size_t pVars, const adios2::Dims &count, const size_t step){
 
-    size_t r = static_cast<size_t>(mpiRank);
-    size_t s = static_cast<size_t>(mpiSize);
+    floatsVecVec.clear();
+
     size_t datasize = std::accumulate(count.begin(), count.end(), 1, std::multiplies<size_t>());
 
     for(size_t i=0; i<pVars; ++i){
@@ -31,14 +31,14 @@ void GenData(const bool zero, const size_t pVars, const adios2::Dims &count){
         floatsVecVec.back().resize(datasize);
         if(!zero){
             for(size_t j=0; j<datasize; ++j){
-                floatsVecVec.back()[j]=j;
+                floatsVecVec.back()[j]=j + step;
             }
         }
     }
 }
 
 template <class T>
-void Dump(std::vector<T> &v)
+void Dump(const std::vector<T> &v, const size_t step)
 {
     for (int i = 0; i < mpiSize; ++i)
     {

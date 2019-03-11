@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
 
-    GenData(true, vars, count);
+    GenData(true, vars, count, 0);
 
     adios2::ADIOS adios(MPI_COMM_WORLD, adios2::DebugON);
     auto adiosIO = adios.DeclareIO("myIO");
@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
             std::cout << "min = " << minmax.first << " max = " << minmax.second << std::endl;
             variable.SetSelection({start, count});
             adiosEngine.Get(variable, floatsVecVec[i].data());
+            Dump(floatsVecVec[i], t);
         }
         adiosEngine.EndStep();
     }

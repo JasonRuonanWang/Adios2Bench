@@ -16,8 +16,6 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
 
-    GenData(false, vars, count);
-
     adios2::ADIOS adios(MPI_COMM_WORLD, adios2::DebugON);
     auto adiosIO = adios.DeclareIO("myIO");
     adiosIO.SetEngine(engine);
@@ -31,9 +29,11 @@ int main(int argc, char *argv[])
 
     for(size_t t=0; t<steps; ++t)
     {
+        GenData(false, vars, count, t);
         adiosEngine.BeginStep();
         for(size_t i=0; i<vars; ++i){
             adiosEngine.Put(floatsVarVec[i], floatsVecVec[i].data());
+            Dump(floatsVecVec[i], t);
         }
         adiosEngine.EndStep();
     }
