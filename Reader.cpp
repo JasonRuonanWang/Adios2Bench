@@ -28,6 +28,8 @@ int main(int argc, char *argv[])
     for(size_t t=0; t<steps; ++t)
     {
         adiosEngine.BeginStep();
+        std::cout << " ===================== " << std::endl;
+        std::cout << "Step " << adiosEngine.CurrentStep() << " begin" << std::endl;
         for(size_t i=0; i<vars; ++i){
             std::string varName = "floatsVar" + std::to_string(i);
             auto variable = adiosIO.InquireVariable<float>(varName);
@@ -39,6 +41,7 @@ int main(int argc, char *argv[])
             std::cout << "min = " << minmax.first << " max = " << minmax.second << std::endl;
             variable.SetSelection({start, count});
             adiosEngine.Get(variable, floatsVecVec[i].data());
+            adiosEngine.PerformGets();
             Dump(floatsVecVec[i], t);
         }
         adiosEngine.EndStep();

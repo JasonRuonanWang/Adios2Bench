@@ -31,6 +31,8 @@ int main(int argc, char *argv[])
     {
         GenData(false, vars, count, t);
         adiosEngine.BeginStep();
+        std::cout << " ===================== " << std::endl;
+        std::cout << "Step " << adiosEngine.CurrentStep() << " begin" << std::endl;
         for(size_t i=0; i<vars; ++i){
             adiosEngine.Put(floatsVarVec[i], floatsVecVec[i].data());
             Dump(floatsVecVec[i], t);

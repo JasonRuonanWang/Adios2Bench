@@ -1,8 +1,6 @@
 #include <vector>
 #include <adios2.h>
-#ifdef ADIOS2_HAVE_MPI
 #include <mpi.h>
-#endif
 
 
 adios2::Dims shape = {10, 10};
@@ -13,7 +11,7 @@ size_t steps = 10000000;
 size_t vars = 1;
 
 std::string engine = "dataman";
-adios2::Params engineParams = {{"Verbose","11"}};
+adios2::Params engineParams = {{"Verbose","0"}};
 
 int mpiRank = 0;
 int mpiSize = 1;
